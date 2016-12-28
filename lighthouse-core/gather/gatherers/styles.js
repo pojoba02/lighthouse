@@ -115,9 +115,7 @@ class Styles extends Gatherer {
       Promise.all(contentPromises).then(styleHeaders => {
         driver.off('CSS.styleSheetAdded', this._onStyleSheetAdded);
         driver.off('CSS.styleSheetRemoved', this._onStyleSheetRemoved);
-        return driver.sendCommand('CSS.disable')
-          .then(_ => driver.sendCommand('DOM.disable'))
-          .then(_ => resolve(styleHeaders));
+        resolve(styleHeaders);
       }).catch(err => reject(err));
     });
   }
