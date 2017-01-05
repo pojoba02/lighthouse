@@ -70,10 +70,16 @@ class ChromeLauncher {
   flags() {
     const flags = [
       `--remote-debugging-port=${this.port}`,
-      '--disable-extensions',
       '--disable-translate',
-      '--disable-default-apps',
-      '--no-first-run',
+      '--disable-extensions', // disable all chrome extensions entirely
+      // '--ignore-certificate-errors', // Ignore certificate errors, like self-signed
+      '--disable-background-networking', /* disables various background network services, including
+          extension updating, safe browsing service, upgrade detector, translate, UMA */
+      '--disable-sync', // disable syncing to a Google account
+      '--metrics-recording-only', // disables reporting to UMA, but allows for collection
+      '--safebrowsing-disable-auto-update', // New safebrowsing lists will not be fetched
+      '--disable-default-apps', // Disables installation of default apps on first run
+      '--no-first-run', // Skip first run wizards
       `--user-data-dir=${this.TMP_PROFILE_DIR}`
     ];
 
