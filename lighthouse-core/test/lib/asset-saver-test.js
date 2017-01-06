@@ -27,8 +27,20 @@ const Audit = require('../../audits/audit.js');
 
 /* eslint-env mocha */
 describe('asset-saver helper', () => {
+  it('generates filename prefixes', () => {
+    const results = {
+      url: 'https://testexample.com',
+      generatedTime: '2017-01-06T02:34:56.217Z'
+    };
+    const str = assetSaver.getFilenamePrefix(results);
+    assert.equal(str, 'testexample.com_01-05-2017_6-34-56_PM');
+  });
+
   it('generates HTML', () => {
-    const options = {url: 'https://testexample.com'};
+    const options = {
+      url: 'https://testexample.com',
+      generatedTime: '2016-05-31T23:34:30.547Z'
+    };
     const artifacts = {
       traces: {
         [Audit.DEFAULT_PASS]: {
@@ -37,15 +49,15 @@ describe('asset-saver helper', () => {
       },
       requestScreenshots: () => Promise.resolve([]),
     };
-    return assetSaver.prepareAssets(options, artifacts).then(assets => {
+    return assetSaver.prepareAssets(artifacts, options).then(assets => {
       assert.ok(/<!doctype/gim.test(assets[0].html));
     });
   });
 
-  describe('saves files to disk with real filenames', function() {
+  describe('saves files.', function() {
     const options = {
       url: 'https://testexample.com/',
-      date: new Date(1464737670547),
+      generatedTime: '2016-05-31T23:34:30.547Z',
       flags: {
         saveAssets: true
       }
@@ -59,12 +71,14 @@ describe('asset-saver helper', () => {
       requestScreenshots: () => Promise.resolve(screenshotFilmstrip)
     };
 
-    assetSaver.saveAssets(options, artifacts);
+    assetSaver.saveAssets(artifacts, options);
 
     it('trace file saved to disk with data', () => {
       const traceFilename = assetSaver.getFilenamePrefix(options) + '-0.trace.json';
       const traceFileContents = fs.readFileSync(traceFilename, 'utf8');
-      assert.ok(traceFileContents.length > 3000000);
+      console.error('yeah', traceFileContents.length)
+      const traceSize = JSON.stringify(traceEvents).length;
+      assert.ok(traceFileContents.length > 3000000, `${traceFilename} not as big as expected: ${traceSize} and ${traceFileContents.length}`);
       fs.unlinkSync(traceFilename);
     });
 

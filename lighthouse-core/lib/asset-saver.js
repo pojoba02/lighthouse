@@ -18,32 +18,31 @@
 
 const fs = require('fs');
 const log = require('../../lighthouse-core/lib/log.js');
+const URL = require('./url-shim');
+const Metrics = require('./traces/metrics-evts');
 const stringify = require('json-stringify-safe');
 
-function getFilenamePrefix(options) {
-  const url = options.url;
-  const hostname = url.match(/^.*?\/\/(.*?)(:?\/|$)/)[1];
+function getFilenamePrefix(results) {
+  const hostname = new URL(results.url).hostname;
 
-  const date = options.date || new Date();
-  const resolvedLocale = new Intl.DateTimeFormat().resolvedOptions().locale;
-  const time = date.toLocaleTimeString(resolvedLocale, {hour12: false});
-  const timeStampStr = date.toISOString().replace(/T.*/, '_' + time);
+  const date = (results.generatedTime && new Date(results.generatedTime)) || new Date();
+  const timeStr = date.toLocaleTimeString({hour12: false}).replace(/\s/,'_');
+  // YYYY-mm-dd via the japanese locale ;)
+  const dateStr = date.toLocaleDateString('ja', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit'
+  }).replace(/\//g, '-');
 
-  const filenamePrefix = hostname + '_' + timeStampStr;
+  const filenamePrefix = `${hostname}_${dateStr}_${timeStr}`;
   // replace characters that are unfriendly to filenames
-  return (filenamePrefix).replace(/[\/\?<>\\:\*\|":]/g, '-');
+  return filenamePrefix.replace(/[\/\?<>\\:\*\|":]/g, '-');
 }
 
-// Some trace events are particularly large, and not only consume a LOT of disk
-// space, but also cause problems for the JSON stringifier. For simplicity, we exclude them
-function filterForSize(traceData) {
-  return traceData.filter(e => e.name !== 'LayoutTree');
-}
-
-function screenshotDump(options, screenshots) {
+function screenshotDump(screenshots, results) {
   return `
   <!doctype html>
-  <title>screenshots ${getFilenamePrefix(options)}</title>
+  <title>screenshots ${getFilenamePrefix(results)}</title>
   <style>
 html {
     overflow-x: scroll;
@@ -87,11 +86,12 @@ function saveArtifacts(artifacts, filename) {
 
 /**
  * Filter traces and extract screenshots to prepare for saving.
- * @param {!Object} options
- * @param {!Artifacts} artifacts
+
+ * @param {!Artifacts} artifactsFilename
+ * @param {!Results} results
  * @return {!Promise<!Array<{traceData: !Object, html: string}>>}
  */
-function prepareAssets(options, artifacts) {
+function prepareAssets(artifacts, results) {
   const passNames = Object.keys(artifacts.traces);
   const assets = [];
 
@@ -101,9 +101,11 @@ function prepareAssets(options, artifacts) {
     return chain.then(_ => artifacts.requestScreenshots(trace))
       .then(screenshots => {
         const traceData = Object.assign({}, trace);
-        traceData.traceEvents = filterForSize(traceData.traceEvents);
-        const html = screenshotDump(options, screenshots);
-
+        if (results && results.audits) {
+          const evts = new Metrics(traceData.traceEvents, results.audits).generateFakeEvents();
+          traceData.traceEvents.push(...evts);
+        }
+        const html = screenshotDump(screenshots, results);
         assets.push({
           traceData,
           html
@@ -115,16 +117,16 @@ function prepareAssets(options, artifacts) {
 
 /**
  * Writes trace(s) and associated screenshot(s) to disk.
- * @param {!Object} options
  * @param {!Artifacts} artifacts
+ * @param {!Results} results
  * @return {!Promise}
  */
-function saveAssets(options, artifacts) {
-  return prepareAssets(options, artifacts).then(assets => {
+function saveAssets(artifacts, results) {
+  return prepareAssets(artifacts, results).then(assets => {
     assets.forEach((data, index) => {
-      const filenamePrefix = getFilenamePrefix(options);
-
+      const filenamePrefix = getFilenamePrefix(results);
       const traceData = data.traceData;
+      console.log('sdf', `${filenamePrefix}-${index}.trace.json`)
       fs.writeFileSync(`${filenamePrefix}-${index}.trace.json`, stringify(traceData, null, 2));
       log.log('trace file saved to disk', filenamePrefix);
 

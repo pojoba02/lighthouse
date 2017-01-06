@@ -20,6 +20,7 @@
 const Audit = require('./audit');
 const TracingProcessor = require('../lib/traces/tracing-processor');
 const Formatter = require('../formatters/formatter');
+const log = require('../lib/log');
 
 // Parameters (in ms) for log-normal CDF scoring. To see the curve:
 // https://www.desmos.com/calculator/joz3pqttdq
@@ -76,14 +77,14 @@ class FirstMeaningfulPaint extends Audit {
       // Recover from trace parsing failures.
       return FirstMeaningfulPaint.generateAuditResult({
         rawValue: -1,
-        debugString: err.message
+        debugString: err.message + err.stack
       });
     });
   }
 
   static calculateScore(evts) {
-    const firstMeaningfulPaint = (evts.firstMeaningfulPaint.ts - evts.navigationStart.ts) / 1000;
-    const firstContentfulPaint = (evts.firstContentfulPaint.ts - evts.navigationStart.ts) / 1000;
+    const firstMeaningfulPaint = evts.firstMeaningfulPaint && (evts.firstMeaningfulPaint.ts - evts.navigationStart.ts) / 1000;
+    const firstContentfulPaint = evts.firstContentfulPaint && (evts.firstContentfulPaint.ts - evts.navigationStart.ts) / 1000;
 
     // Expose the raw, unchanged monotonic timestamps from the trace, along with timing durations
     const extendedInfo = {
