@@ -95,7 +95,7 @@ class UnusedCSSRules extends Audit {
     });
 
     Object.keys(indexedStylesheets).forEach(stylesheetId => {
-      const stylesheetInfo = indexedStylesheets[styleSheetId];
+      const stylesheetInfo = indexedStylesheets[stylesheetId];
       const numUsed = stylesheetInfo.used.length;
       const numUnused = stylesheetInfo.unused.length;
       stylesheetInfo.percentUsed = numUsed / (numUsed + numUnused);
