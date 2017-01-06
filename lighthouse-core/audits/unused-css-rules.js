@@ -17,10 +17,10 @@
 'use strict';
 
 const Audit = require('./audit');
-const Formatter = require('../formatters/formatter')
+const Formatter = require('../formatters/formatter');
 
 function keyForRange(range) {
-  return `${range.startLine},${range.startColumn}`
+  return `${range.startLine},${range.startColumn}`;
 }
 
 class UnusedCSSRules extends Audit {
@@ -32,7 +32,8 @@ class UnusedCSSRules extends Audit {
       category: 'Best Practices',
       name: 'unused-css-rules',
       description: 'Site does not have unused CSS rules',
-      helpText: 'Remove unused rules from stylesheets to unnecessary reduce bytes consumed by network activity.',
+      helpText: 'Remove unused rules from stylesheets to reduce unnecessary ' +
+          'bytes consumed by network activity.',
       requiredArtifacts: ['CSSUsage', 'Styles']
     };
   }
@@ -93,12 +94,11 @@ class UnusedCSSRules extends Audit {
       }
     });
 
-    for (let stylesheetId in indexedStylesheets) {
-      const stylesheetInfo = indexedStylesheets[stylesheetId];
+    Object.values(indexedStylesheets).forEach(stylesheetInfo => {
       const numUsed = stylesheetInfo.used.length;
       const numUnused = stylesheetInfo.unused.length;
       stylesheetInfo.percentUsed = numUsed / (numUsed + numUnused);
-    }
+    });
 
     const results = unusedRules.map(rule => {
       const stylesheet = indexedStylesheets[rule.styleSheetId];
@@ -108,7 +108,7 @@ class UnusedCSSRules extends Audit {
         code: selector.replace(/,(?=[^\s])/g, ', '),
         label: `line: ${rule.range.startLine}, col: ${rule.range.startColumn}`,
         url: stylesheet.header.sourceURL || '<inline>',
-      }
+      };
     });
 
     let displayValue = '';
